@@ -4,6 +4,8 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 add_executable(babylonfs
     ./src/main.cpp
+    ./src/babylonfs.cpp
+    ./src/logic.cpp
 )
 
 target_compile_options(babylonfs PRIVATE -Wall -Wextra -pedantic)
@@ -16,3 +18,4 @@ target_include_directories(fuse INTERFACE ${FUSE_INCLUDE_DIRS})
 target_link_libraries(fuse INTERFACE ${FUSE_LIBRARIES})
 
 target_link_libraries(babylonfs fuse)
+target_compile_definitions(babylonfs PRIVATE FUSE_USE_VERSION=26)
