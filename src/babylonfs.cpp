@@ -1,7 +1,8 @@
-#include "babylonfs.h"
 #include <fuse.h>
 #include <unistd.h>
 #include <cstring>
+
+#include "babylonfs.h"
 
 void Directory::stat(struct stat *st) const {
     st->st_mode = S_IFDIR | 0755;
@@ -21,7 +22,7 @@ const struct fuse_operations *BabylonFS::run(const char *seed) noexcept {
     } else {
         me.seed = seed;
     }
-    return reinterpret_cast<const fuse_operations_compat2 *>(me.fuseOps.get());
+    return reinterpret_cast<const fuse_operations *>(me.fuseOps.get());
 }
 
 Entity::ptr BabylonFS::getPath(const char *pathStr) const {
