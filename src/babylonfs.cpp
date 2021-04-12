@@ -1,15 +1,16 @@
 #include <fuse.h>
 #include <unistd.h>
 #include <cstring>
+#include <utility>
 
 #include "babylonfs.h"
 
-void Directory::stat(struct stat *st) const {
+void Directory::stat(struct stat *st) {
     st->st_mode = S_IFDIR | 0755;
     st->st_nlink = 2;
 }
 
-void File::stat(struct stat *st) const {
+void File::stat(struct stat *st) {
     st->st_mode = S_IFREG | 0644;
     st->st_nlink = 1;
     st->st_size = getContents().size();
@@ -22,10 +23,10 @@ const struct fuse_operations *BabylonFS::run(const char *seed) noexcept {
     } else {
         me.seed = seed;
     }
-    return reinterpret_cast<const fuse_operations *>(me.fuseOps.get());
+    return me.fuseOps.get();
 }
 
-Entity::ptr BabylonFS::getPath(const char *pathStr) const {
+Entity::ptr BabylonFS::getPath(const char *pathStr) {
     std::filesystem::path path{pathStr};
     Entity::ptr cur = getRoot();
     for (const auto &element : path) {
@@ -91,7 +92,7 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
             auto entry = instance().getPath(path);
             (void) dynamic_cast<File &>(*entry); // check that it's a file, sorry
 
-            if ((fi->flags & O_ACCMODE) != O_RDONLY && dynamic_cast<Note *>(entry.get()) == nullptr)
+            if ((fi->flags & O_ACCMODE) != O_RDONLY/* && dynamic_cast<Note *>(entry) == nullptr */)
                 return -EACCES;
             //TODO create file if flags == |?| + check if it's possible (same like mkdir)
         } catch (std::exception &e) {
@@ -156,7 +157,6 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
         try {
             auto entry = instance().getPath(path);
             auto &file = dynamic_cast<File &>(*entry);
-            auto len = file.getContents().size();
 
             file.write(buf, size, offset);
         } catch (std::exception &e) {
@@ -174,6 +174,8 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
             auto entry = instance().getPath(parent.c_str());
             auto &dir = dynamic_cast<Directory &>(*entry);
             dir.mkdir(name);
+
+            return 0;
         } catch (std::exception &e) {
             return -EPERM;
         }
