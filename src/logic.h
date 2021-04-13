@@ -14,6 +14,7 @@ struct Book : public File {
 
     explicit Book(const std::string &name, RoomData *myRoom, std::string shelf_name);
     std::string_view getContents() override;
+    int getSize() override;
     void move(Entity &to) override;
 
     RoomData *myRoom;

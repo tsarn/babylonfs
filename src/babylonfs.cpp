@@ -46,7 +46,7 @@ void Directory::deleteFile(const std::string &) {
 void File::stat(struct stat *st) {
     st->st_mode = S_IFREG | 0644;
     st->st_nlink = 1;
-    st->st_size = getContents().size();
+    st->st_size = getSize();
 }
 
 const struct fuse_operations *BabylonFS::run(const char *seed) noexcept {
@@ -189,7 +189,7 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
                 throwError(std::errc::is_a_directory);
             }
 
-            auto len = file->getContents().size();
+            auto len = file->getSize();
 
             if (offset < len) {
                 if (len < offset + size) {

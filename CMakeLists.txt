@@ -6,6 +6,7 @@ add_executable(babylonfs
     ./src/main.cpp
     ./src/babylonfs.cpp
     ./src/logic.cpp
+    ./src/util.cpp
 )
 
 target_compile_options(babylonfs PRIVATE -Wall -Wextra -pedantic)

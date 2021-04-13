@@ -46,6 +46,8 @@ struct File : public Entity {
 
     virtual std::string_view getContents() = 0;
 
+    virtual int getSize() { return getContents().size(); }
+
     virtual void write(const char *buf, size_t size, off_t offset);
 };
 

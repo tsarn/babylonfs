@@ -1,7 +1,10 @@
 #include "babylonfs.h"
 #include "logic.h"
+#include "util.h"
 
 #include <utility>
+
+static const int bookSize = 4096 * 256;
 
 Entity::ptr BabylonFS::getRoot() {
     static RoomStorage roomStorage{cycle};
@@ -10,10 +13,16 @@ Entity::ptr BabylonFS::getRoot() {
 
 Book::Book(const std::string &name, RoomData *myRoom, std::string shelf_name) : myRoom(myRoom), shelf_name(std::move(shelf_name)) {
     this->name = name;
-    //todo random contents by name as a seed
+}
+
+int Book::getSize() {
+    return bookSize;
 }
 
 std::string_view Book::getContents() {
+    if (contents.empty()) {
+        contents = generateStringFromSeed(name, bookSize);
+    }
     return contents;
 }
 
@@ -140,10 +149,13 @@ RoomData::RoomData(int n, int cycle) : cycle(cycle) {
     }
     for (auto kek : {"b0", "b1", "b2","b3"}) {
         for (auto kek2 : {"0", "1", "2", "3", "4"}) {
-            auto shelf_name = std::string(kek) + kek2;
+            auto shelfName = std::string(kek) + kek2;
             auto seed = std::to_string(n) + kek + kek2;
-            std::vector<std::string> names(32); //todo generate names from seed
-            shelfToBook[shelf_name] = names;
+            std::vector<std::string> names(32);
+            for (int i = 0; i < names.size(); ++i) {
+                names[i] = generateStringFromSeed(shelfName + "/book/" + std::to_string(i), 16);
+            }
+            shelfToBook[shelfName] = names;
         }
     }
 }
