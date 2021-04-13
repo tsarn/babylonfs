@@ -136,6 +136,9 @@ RoomData::RoomData(int n, int cycle) : cycle(cycle) {
         } else if (n == cycle - 1) {
             leftN = n - 1;
             rightN = 0;
+        } else {
+            leftN = n - 1;
+            rightN = n + 1;
         }
     }
     for (auto kek : {"b0", "b1", "b2","b3"}) {
@@ -165,9 +168,9 @@ Entity::ptr Room::get(const std::string &name) {
     if (name == "b0" || name == "b1" || name == "b2" || name == "b3") {
         return std::make_unique<Bookcase>(name, data);
     } else if (name == "k" + std::to_string(data->leftN)) {
-        return std::make_unique<Room>(data);
+        return std::make_unique<Room>(data->storage->getRoom(data->leftN));
     } else if (name == "k" + std::to_string(data->rightN)) {
-        return std::make_unique<Room>(data);
+        return std::make_unique<Room>(data->storage->getRoom(data->rightN));
     } else if (name == "desk") {
         return std::make_unique<Desk>(data);
     }
@@ -378,5 +381,7 @@ RoomStorage::RoomStorage(int cycle) : cycle(cycle) {}
 
 RoomData* RoomStorage::getRoom(int n) {
     if (rooms[n]) return rooms[n].get();
-    return (rooms[n] = std::make_unique<RoomData>(n, cycle)).get();
+    auto retval = (rooms[n] = std::make_unique<RoomData>(n, cycle)).get();
+    retval->storage = this;
+    return retval;
 }

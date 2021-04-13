@@ -76,6 +76,8 @@ public:
     std::string basketName;
 };
 
+struct RoomStorage;
+
 struct RoomData {
     RoomData(int n, int cycle);
 
@@ -86,6 +88,7 @@ struct RoomData {
     std::vector<NoteContent> myNotes;
     std::unordered_map<std::string, std::vector<std::string>> takenBooks;
     std::unordered_map<std::string, std::vector<std::string>> shelfToBook;
+    RoomStorage *storage;
 };
 
 struct Room : public Directory {
