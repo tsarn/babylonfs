@@ -8,7 +8,7 @@
 #include "../src/babylonfs.h"
 
 #define seed "test_seed"
-#define root "/tmp/babylonfs"
+#define root "./test_babylonfs"
 
 namespace fs = std::filesystem;
 
@@ -31,8 +31,6 @@ public:
         struct fuse *fuse_ptr = fuse;
 
         fuse_thread = std::thread([fuse_ptr]() { fuse_loop(fuse_ptr); });
-
-        sleep(1);
     }
 
     BabylonFSKeeper(const BabylonFSKeeper&) = delete;
