@@ -18,7 +18,7 @@ std::string_view Book::getContents() {
 
 void Book::move(Entity &to) {
     (void)to;
-    //todo [masha F]
+
     if (dynamic_cast<Shelf *>(&to) != nullptr) {
         auto shelf = dynamic_cast<Shelf *>(&to);
         if (myRoom != shelf->myRoom) {
@@ -180,6 +180,28 @@ Entity::ptr Notes::get(const std::string &name) {
     return std::make_unique<Note>(name, id, myRoom, true, this->name);
 }
 
+void Notes::createFile(std::string name) {
+    note_content me;
+    me.first = name;
+    me.second = {};
+    myRoom->myBaskets[this->name].push_back(me);
+}
+
+void Notes::deleteFile(const std::string &name) {
+    auto notes = myRoom->myBaskets[this->name];
+    int id = -1;
+    for (int i = 0; i < notes.size(); ++i) {
+        if (notes[i].first == name) {
+            id = i;
+        }
+    }
+    if (id == -1) {
+        throwError(std::errc::invalid_argument);
+    } else {
+        notes.erase(notes.begin() + id);
+    }
+}
+
 std::vector<std::string> Shelf::getContents() {
     return myRoom->shelf_to_book.at(this->name);
 }
@@ -214,6 +236,37 @@ Entity::ptr Desk::get(const std::string &name) {
     }
     
     return nullptr;
+}
+
+void Desk::createFile(std::string name) {
+    note_content me;
+    me.first = name;
+    me.second = {};
+    myRoom->myNotes.push_back(me);
+}
+
+void Desk::deleteFile(const std::string &name) {
+    auto notes = myRoom->myNotes;
+    int id = -1;
+    for (int i = 0; i < notes.size(); ++i) {
+        if (notes[i].first == name) {
+            id = i;
+        }
+    }
+    if (id == -1) {
+        throwError(std::errc::invalid_argument);
+    } else {
+        notes.erase(notes.begin() + id);
+    }
+}
+
+void Desk::deleteDirectory(const std::string &name) {
+    auto notes = myRoom->myBaskets;
+    if (notes.contains(name)) {
+        notes.erase(name);
+    } else {
+        throwError(std::errc::invalid_argument);
+    }
 }
 
 std::string_view Note::getContents() {

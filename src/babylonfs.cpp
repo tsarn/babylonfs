@@ -22,7 +22,7 @@ void File::write(const char *, size_t, off_t) {
     throwError(std::errc::permission_denied);
 }
 
-void Directory::createFile(const std::string &) {
+void Directory::createFile(std::string ) {
     throwError(std::errc::permission_denied);
 }
 
@@ -33,6 +33,14 @@ void Directory::createDirectory(const std::string &) {
 void Directory::stat(struct stat *st) {
     st->st_mode = S_IFDIR | 0755;
     st->st_nlink = 2;
+}
+
+void Directory::deleteDirectory(const std::string &) {
+    throwError(std::errc::permission_denied);
+}
+
+void Directory::deleteFile(const std::string &) {
+    throwError(std::errc::permission_denied);
 }
 
 void File::stat(struct stat *st) {

@@ -32,9 +32,13 @@ struct Directory : public Entity {
 
     virtual Entity::ptr get(const std::string &name) = 0;
 
-    virtual void createFile(const std::string &name);
+    virtual void createFile(std::string name);
+
+    virtual void deleteFile(const std::string &name);
 
     virtual void createDirectory(const std::string &name);
+
+    virtual void deleteDirectory(const std::string &name);
 };
 
 struct File : public Entity {
