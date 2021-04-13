@@ -4,12 +4,14 @@
 #include <utility>
 #include <fuse.h>
 #include <regex>
+#include <unordered_map>
+#include <unordered_set>
 #include "doctest.h"
 
 #include "../src/babylonfs.h"
 
 #define seed "test_seed"
-#define cycle -1
+#define cycle 5
 #define root "./test_babylonfs"
 
 namespace fs = std::filesystem;
@@ -84,6 +86,15 @@ void shelves_walk(const fs::path &path, int depth, int max_depth,
     });
 }
 
+void desks_walk(const fs::path &path, int depth, int max_depth,
+                  const std::function<void(const fs::path&)>& checker) {
+    rooms_walk(path, depth, max_depth, [&checker](const fs::path &path) {
+        auto desk_path = path;
+        desk_path.append("desk");
+        checker(desk_path);
+    });
+}
+
 void books_walk(const fs::path &path, int depth, int max_depth,
                   const std::function<void(const fs::path&)>& checker) {
     shelves_walk(path, depth, max_depth, [&checker](const fs::path &path) {
@@ -113,7 +124,7 @@ TEST_CASE("Cupboards cannot be removed") {
     BabylonFSKeeper keeper(root);
 
     cupboards_walk(fs::path(root), 0, 5, [](const fs::path &path) {
-                CHECK_THROWS(fs::remove(path));
+        CHECK_THROWS(fs::remove(path));
     });
 }
 
@@ -121,7 +132,7 @@ TEST_CASE("Cupboards can be renamed") {
     BabylonFSKeeper keeper(root);
 
     cupboards_walk(fs::path(root), 0, 5, [](const fs::path &path) {
-                CHECK_NOTHROW(fs::rename(path, path.string() + "n"));
+        CHECK_NOTHROW(fs::rename(path, path.string() + "n"));
     });
 }
 
@@ -192,4 +203,114 @@ TEST_CASE("Book permissions") {
         CHECK((fs::status(path).permissions() & fs::perms::others_read) == fs::perms::others_read);
         CHECK((fs::status(path).permissions() & fs::perms::others_write) == fs::perms::none);
     });
+}
+
+TEST_CASE("Every room has desk") {
+    BabylonFSKeeper keeper(root);
+    desks_walk(fs::path(root), 0, 7, [](const fs::path &path) {
+        CHECK(fs::is_directory(path));
+    });
+}
+
+TEST_CASE("Can create and remove files and directories on desk") {
+    BabylonFSKeeper keeper(root);
+    desks_walk(fs::path(root), 0, 0, [](const fs::path &path) {
+        auto tmp_dir_path = path;
+        tmp_dir_path.append("tmp_dir");
+        auto file1_path = path;
+        file1_path.append("file1");
+        auto file2_path = tmp_dir_path;
+        file1_path.append("file2");
+        CHECK_NOTHROW(fs::create_directory(tmp_dir_path));
+        CHECK_NOTHROW(std::ofstream f1(file1_path));
+        CHECK_NOTHROW(std::ofstream f2(file2_path));
+        CHECK_NOTHROW(fs::remove(file2_path));
+        CHECK_NOTHROW(fs::remove(file1_path));
+        CHECK_NOTHROW(fs::remove(tmp_dir_path));
+    });
+}
+
+TEST_CASE("Can create and remove files and directories on desk") {
+    BabylonFSKeeper keeper(root);
+    desks_walk(fs::path(root), 0, 0, [](const fs::path &path) {
+        auto tmp_dir_path = path;
+        tmp_dir_path.append("tmp_dir");
+        auto file1_path = path;
+        file1_path.append("file1");
+        auto file2_path = tmp_dir_path;
+        file1_path.append("file2");
+                CHECK_NOTHROW(fs::create_directory(tmp_dir_path));
+                CHECK_NOTHROW(std::ofstream f1(file1_path));
+                CHECK_NOTHROW(std::ofstream f2(file2_path));
+                CHECK_NOTHROW(fs::remove(file2_path));
+                CHECK_NOTHROW(fs::remove(file1_path));
+                CHECK_NOTHROW(fs::remove(tmp_dir_path));
+    });
+}
+
+TEST_CASE("Cannot create recursive subfolders on desk") {
+    BabylonFSKeeper keeper(root);
+    desks_walk(fs::path(root), 0, 0, [](const fs::path &path) {
+        auto tmp_dir_path = path;
+        tmp_dir_path.append("tmp_dir");
+        auto tmp_dir2_path = tmp_dir_path;
+        tmp_dir2_path.append("tmp_dir");
+        CHECK_NOTHROW(fs::create_directory(tmp_dir_path));
+        CHECK_THROWS(fs::create_directory(tmp_dir2_path));
+    });
+}
+
+TEST_CASE("Can move books to desk and back") {
+    BabylonFSKeeper keeper(root);
+    books_walk(fs::path(root), 0, 0, [](const fs::path &path) {
+        auto on_desk_path = path.parent_path().parent_path().parent_path()
+                .append("desk").append(path.filename().string());
+        CHECK_NOTHROW(fs::rename(path, on_desk_path));
+        CHECK_NOTHROW(fs::rename(on_desk_path, path));
+    });
+}
+
+TEST_CASE("Can't move books to another place") {
+    BabylonFSKeeper keeper(root);
+    books_walk(fs::path(root), 0, 0, [](const fs::path &path) {
+        auto on_desk_path = path.parent_path().parent_path().parent_path()
+                .append("desk").append(path.filename().string());
+        auto shelf_path = path.parent_path();
+        auto cupboard_path = shelf_path.parent_path();
+        auto another_path = cupboard_path;
+        if (shelf_path.filename().string() == "0") {
+            another_path.append("1");
+        } else {
+            another_path.append("0");
+        }
+        another_path.append("_nm");
+        CHECK_NOTHROW(fs::rename(path, on_desk_path));
+        CHECK_THROWS(fs::rename(on_desk_path, another_path));
+        CHECK_NOTHROW(fs::rename(on_desk_path, path));
+    });
+}
+
+TEST_CASE("Cyclic library") {
+    BabylonFSKeeper keeper(root);
+
+    std::unordered_map<std::string, std::unordered_set<std::string>> room_books;
+
+    rooms_walk(fs::path(root), 0, 10, [&room_books](const fs::path &path) {
+        auto first_shelf_path = path;
+        first_shelf_path.append("b0").append("0");
+
+        std::unordered_set<std::string> books;
+
+        for (const auto& book_path : fs::directory_iterator(first_shelf_path)) {
+            books.insert(book_path.path().filename().string());
+        }
+
+        if (room_books.contains(path.filename())) {
+            CHECK(room_books[path.filename().string()] == books);
+        } else {
+            room_books[path.filename().string()] = books;
+        }
+    });
+
+    CHECK(room_books.size() == 5 + 1); // also root directory
 }
