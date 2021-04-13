@@ -11,8 +11,8 @@
 
 ## Использование
 
-    $ babylonfs -f -s [--seed=SEED] [--cycle=CYCLE] <путь>
+    $ ./build/babylonfs -f -s [--seed=SEED] [--cycle=CYCLE] <путь>
 
 ## Как запустить тесты локально:
 
-Тесты?..
+    $ ./build/test
