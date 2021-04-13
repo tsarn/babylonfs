@@ -3,6 +3,7 @@
 #include <thread>
 #include <utility>
 #include <fuse.h>
+#include <regex>
 #include "doctest.h"
 
 #include "../src/babylonfs.h"
@@ -100,7 +101,7 @@ TEST_CASE("Every room has 2 neighbour rooms") {
     });
 }
 
-TEST_CASE("\"Every room has 4 cupboards\"") {
+TEST_CASE("Every room has 4 cupboards") {
     BabylonFSKeeper keeper(root);
 
     cupboards_walk(fs::path(root), 0, 5, [](const fs::path &path) {
@@ -108,7 +109,7 @@ TEST_CASE("\"Every room has 4 cupboards\"") {
     });
 }
 
-TEST_CASE("\"Cupboards cannot be removed\"") {
+TEST_CASE("Cupboards cannot be removed") {
     BabylonFSKeeper keeper(root);
 
     cupboards_walk(fs::path(root), 0, 5, [](const fs::path &path) {
@@ -116,7 +117,7 @@ TEST_CASE("\"Cupboards cannot be removed\"") {
     });
 }
 
-TEST_CASE("\"Cupboards can be renamed\"") {
+TEST_CASE("Cupboards can be renamed") {
     BabylonFSKeeper keeper(root);
 
     cupboards_walk(fs::path(root), 0, 5, [](const fs::path &path) {
@@ -124,7 +125,7 @@ TEST_CASE("\"Cupboards can be renamed\"") {
     });
 }
 
-TEST_CASE("\"Every cupboard has 5 shelves\"") {
+TEST_CASE("Every cupboard has 5 shelves") {
     BabylonFSKeeper keeper(root);
 
     cupboards_walk(fs::path(root), 0, 5, [](const fs::path &path) {
@@ -140,7 +141,7 @@ TEST_CASE("\"Every cupboard has 5 shelves\"") {
     });
 }
 
-TEST_CASE("\"Shelves cannot be removed\"") {
+TEST_CASE("Shelves cannot be removed") {
     BabylonFSKeeper keeper(root);
 
     shelves_walk(fs::path(root), 0, 5, [](const fs::path &path) {
@@ -148,7 +149,7 @@ TEST_CASE("\"Shelves cannot be removed\"") {
     });
 }
 
-TEST_CASE("\"Shelves can be renamed\"") {
+TEST_CASE("Shelves can be renamed") {
     BabylonFSKeeper keeper(root);
 
     shelves_walk(fs::path(root), 0, 5, [](const fs::path &path) {
@@ -156,7 +157,7 @@ TEST_CASE("\"Shelves can be renamed\"") {
     });
 }
 
-TEST_CASE("\"Every shelf has 32 books\"") {
+TEST_CASE("Every shelf has 32 books") {
     BabylonFSKeeper keeper(root);
 
     shelves_walk(fs::path(root), 0, 5, [](const fs::path &path) {
@@ -165,5 +166,30 @@ TEST_CASE("\"Every shelf has 32 books\"") {
             num_books++;
         }
         CHECK(num_books == 32);
+    });
+}
+
+TEST_CASE("Books naming") {
+    BabylonFSKeeper keeper(root);
+
+    books_walk(fs::path(root), 0, 1, [](const fs::path &path) {
+        CHECK(std::regex_match(path.filename().string(), std::regex("[a-z.,]+")));
+    });
+}
+
+TEST_CASE("Book sizes") {
+    BabylonFSKeeper keeper(root);
+
+    books_walk(fs::path(root), 0, 1, [](const fs::path &path) {
+        CHECK(fs::file_size(path) == 4096 * 256);
+    });
+}
+
+TEST_CASE("Book permissions") {
+    BabylonFSKeeper keeper(root);
+
+    books_walk(fs::path(root), 0, 1, [](const fs::path &path) {
+        CHECK((fs::status(path).permissions() & fs::perms::others_read) == fs::perms::others_read);
+        CHECK((fs::status(path).permissions() & fs::perms::others_write) == fs::perms::none);
     });
 }
