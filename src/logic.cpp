@@ -15,6 +15,7 @@ std::string_view Book::getContents() {
 }
 
 void Book::move(const std::string &to) {
+    (void)to;
     //todo [masha F]
 }
 
@@ -23,6 +24,7 @@ Shelf::Shelf(std::string name, Room *myRoom) : myRoom(myRoom) {
 }
 
 void Shelf::rename(const std::string &to) {
+    (void)to;
     // "does nothing"
 }
 
@@ -31,6 +33,7 @@ Bookcase::Bookcase(std::string name, Room *myRoom) : myRoom(myRoom) {
 }
 
 void Bookcase::rename(const std::string &to) {
+    (void)to;
     // "does nothing"
 }
 
@@ -60,7 +63,7 @@ std::vector<std::string> Desk::getContents() {
 
 Desk::Desk(Room *myRoom) : myRoom(myRoom) {}
 
-void Desk::mkdir(const std::string &name) {
+void Desk::createDirectory(const std::string &name) {
     myRoom->myBaskets[name] = {};
 }
 
@@ -78,7 +81,7 @@ std::vector<std::string> Notes::getContents() {
 }
 
 Note::Note(const std::string &name, int id, Room *myRoom, bool isBasket, std::string basketName) :
-    id(id), myRoom(myRoom), isBasket(isBasket), basketName(std::move(basketName)) {
+    id(id), isBasket(isBasket), myRoom(myRoom), basketName(std::move(basketName)) {
     this->name = name;
 }
 
@@ -157,11 +160,14 @@ Entity::ptr Desk::get(const std::string &name) {
     if (myRoom->myBaskets.contains(name)) {
         return std::make_unique<Notes>(name, myRoom);
     }
+
     for (size_t i = 0; i < myRoom->myNotes.size(); ++i) {
         if (myRoom->myNotes[i].first == name) {
             return std::make_unique<Note>(name, i, myRoom, false, "");
         }
     }
+    
+    return nullptr;
 }
 
 std::string_view Note::getContents() {

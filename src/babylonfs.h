@@ -9,19 +9,16 @@
 
 using note_content = std::pair<std::string, std::string>;
 
+[[noreturn]] void throwError(std::errc code);
+
 struct Entity {
     using ptr = std::unique_ptr<Entity>;
 
     virtual void stat(struct stat *) = 0;
 
-    virtual void rename(const std::string &to) {
-        //TODO error
-    }
+    virtual void rename(const std::string &to);
 
-    //assume to is new parent path
-    virtual void move(const std::string &to) {
-        //TODO error
-    }
+    virtual void move(const std::string &to);
 
     virtual ~Entity() = default;
 
@@ -36,13 +33,9 @@ struct Directory : public Entity {
 
     virtual Entity::ptr get(const std::string &name) = 0;
 
-    virtual void mkdir(const std::string &name) {
-        //TODO error
-    }
+    virtual void createFile(const std::string &name);
 
-    virtual void create(const std::string &name) {
-        //TODO error
-    }
+    virtual void createDirectory(const std::string &name);
 };
 
 struct File : public Entity {
@@ -50,9 +43,7 @@ struct File : public Entity {
 
     virtual std::string_view getContents() = 0;
 
-    virtual void write(const char *buf, size_t size, off_t offset) {
-        //TODO error
-    }
+    virtual void write(const char *buf, size_t size, off_t offset);
 };
 
 
@@ -69,7 +60,7 @@ private:
 
     Entity::ptr getRoot();
 
-    Entity::ptr getPath(const char *pathStr);
+    Entity::ptr getPath(const std::string& pathStr);
 
 private:
     std::unique_ptr<struct fuse_operations> fuseOps{};

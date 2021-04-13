@@ -43,8 +43,8 @@ struct Desk : public Directory {
     explicit Desk(Room* myRoom);
     std::vector<std::string> getContents() override;
     ptr get(const std::string &name) override;
-    void mkdir(const std::string &name) override;
-    void create(const std::string &name) override; //todo [masha F]
+    void createFile(const std::string &name) override; //todo [masha F]
+    void createDirectory(const std::string &name) override;
 
 private:
     Room* myRoom;
@@ -54,7 +54,7 @@ struct Notes : public Directory {
     Notes(std::string name, Room* myRoom);
     std::vector<std::string> getContents() override;
     ptr get(const std::string &name) override;
-    void create(const std::string &name) override; //todo [masha F]
+    void createFile(const std::string &name) override; //todo [masha F]
 
 private:
     Room* myRoom;
