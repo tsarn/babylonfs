@@ -346,22 +346,31 @@ bool Note::isWriteable() {
 }
 
 void Note::write(const char *buf, size_t size, off_t offset) {
-    NoteContent me;
 
     if (!isBasket) {
         std::vector<NoteContent> &notes = myRoom->myNotes;
-        me = notes[id];
+
+        auto& me = notes[id];
+
+        if (offset + size > me.second.size()) {
+            me.second.resize(offset + size);
+        }
+
+        for (size_t i = 0; i < size; ++i) {
+            me.second[offset + i] = buf[i];
+        }
     } else {
         std::vector<NoteContent> &notes = myRoom->myBaskets.at(basketName);
-        me = notes[id];
-    }
 
-    if (offset + size > me.second.size()) {
-        me.second.resize(offset + size);
-    }
+        auto& me = notes[id];
 
-    for (size_t i = 0; i < size; ++i) {
-        me.second[offset + i] = buf[i];
+        if (offset + size > me.second.size()) {
+            me.second.resize(offset + size);
+        }
+
+        for (size_t i = 0; i < size; ++i) {
+            me.second[offset + i] = buf[i];
+        }
     }
 }
 
