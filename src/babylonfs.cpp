@@ -3,6 +3,7 @@
 #include <cstring>
 #include <utility>
 #include <system_error>
+#include <iostream>
 
 #include "babylonfs.h"
 

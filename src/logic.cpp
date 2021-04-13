@@ -3,6 +3,7 @@
 #include "util.h"
 
 #include <utility>
+#include <iostream>
 
 static const int bookSize = 4096 * 256;
 
@@ -32,7 +33,7 @@ void Book::move(Entity &to, const std::string& newName) {
             throwError(std::errc::invalid_argument);
         }
         if (shelf->name == shelfName) {
-            auto taken_books = myRoom->takenBooks[shelfName];
+            auto& taken_books = myRoom->takenBooks[shelfName];
             auto it = std::find(taken_books.begin(), taken_books.end(), name);
             if (std::find(taken_books.begin(), taken_books.end(), name) == taken_books.end()) {
                 throwError(std::errc::invalid_argument);
@@ -47,7 +48,7 @@ void Book::move(Entity &to, const std::string& newName) {
         if (myRoom != desk->myRoom) {
             throwError(std::errc::invalid_argument);
         }
-        auto shelfBooks = myRoom->shelfToBook[shelfName];
+        auto& shelfBooks = myRoom->shelfToBook[shelfName];
         auto it = std::find(shelfBooks.begin(), shelfBooks.end(), name);
         if (it == shelfBooks.end()) {
             throwError(std::errc::invalid_argument);
@@ -112,7 +113,7 @@ Notes::Notes(std::string name, RoomData *myRoom) : myRoom(myRoom) {
 
 std::vector<std::string> Notes::getContents() {
     std::vector<std::string> res;
-    auto myNotes = myRoom->myBaskets.at(this->name);
+    auto& myNotes = myRoom->myBaskets.at(this->name);
     for (const auto &kek: myNotes) {
         res.push_back(kek.first);
     }
@@ -175,7 +176,7 @@ Entity::ptr Room::get(const std::string &name) {
 
 Entity::ptr Notes::get(const std::string &name) {
     int id = -1;
-    auto myNotes = myRoom->myBaskets[this->name];
+    auto &myNotes = myRoom->myBaskets[this->name];
     for (size_t i = 0; i < myNotes.size(); ++i) {
         if (myNotes[i].first == name) {
             id = i;
@@ -199,7 +200,7 @@ void Notes::createFile(std::string name) {
 }
 
 void Notes::deleteFile(const std::string &name) {
-    auto notes = myRoom->myBaskets[this->name];
+    auto &notes = myRoom->myBaskets[this->name];
     int id = -1;
     for (int i = 0; i < notes.size(); ++i) {
         if (notes[i].first == name) {
@@ -218,7 +219,7 @@ std::vector<std::string> Shelf::getContents() {
 }
 
 Entity::ptr Shelf::get(const std::string &name) {
-    auto book_names = myRoom->shelfToBook.at(this->name);
+    auto &book_names = myRoom->shelfToBook.at(this->name);
     for (const auto &kek: book_names) {
         if (kek == name) {
             return std::make_unique<Book>(name, myRoom, this->name);
@@ -227,12 +228,22 @@ Entity::ptr Shelf::get(const std::string &name) {
     return nullptr;
 }
 
-void Shelf::move(Entity &to, const std::string& newName) {
-    throwError(std::errc::operation_not_supported); // TODO!
+void Shelf::move(Entity &to, const std::string&) {
+    auto bc = dynamic_cast<Bookcase *>(&to);
+    if (bc != nullptr && name.starts_with(bc->name)) {
+        // do nothing
+    } else {
+        throwError(std::errc::invalid_argument);
+    }
 }
 
-void Bookcase::move(Entity &to, const std::string& newName) {
-    throwError(std::errc::operation_not_supported); // TODO!
+void Bookcase::move(Entity &to, const std::string&) {
+    auto r = dynamic_cast<Room *>(&to);
+    if (r != nullptr && myRoom == r->data) {
+        // do nothing
+    } else {
+        throwError(std::errc::invalid_argument);
+    }
 }
 
 Entity::ptr Desk::get(const std::string &name) {
@@ -259,6 +270,7 @@ Entity::ptr Desk::get(const std::string &name) {
 
 void Desk::createFile(std::string name) {
     auto contents = getContents();
+    std::cout << contents.size();
     auto it = std::find(contents.begin(), contents.end(), name);
     if (it != contents.end()) {
         throwError(std::errc::invalid_argument);
@@ -270,7 +282,7 @@ void Desk::createFile(std::string name) {
 }
 
 void Desk::deleteFile(const std::string &name) {
-    auto notes = myRoom->myNotes;
+    auto &notes = myRoom->myNotes;
     int id = -1;
     for (int i = 0; i < notes.size(); ++i) {
         if (notes[i].first == name) {
@@ -285,7 +297,7 @@ void Desk::deleteFile(const std::string &name) {
 }
 
 void Desk::deleteDirectory(const std::string &name) {
-    auto notes = myRoom->myBaskets;
+    auto &notes = myRoom->myBaskets;
     if (notes.contains(name)) {
         notes.erase(name);
     } else {
@@ -295,10 +307,10 @@ void Desk::deleteDirectory(const std::string &name) {
 
 std::string_view Note::getContents() {
     if (isBasket) {
-        std::vector<NoteContent> notes = myRoom->myNotes;
+        std::vector<NoteContent>& notes = myRoom->myNotes;
         return notes[id].second;
     } else {
-        std::vector<NoteContent> notes = myRoom->myBaskets.at(basketName);
+        std::vector<NoteContent>& notes = myRoom->myBaskets.at(basketName);
         return notes[id].second;
     }
 }
@@ -333,10 +345,10 @@ void Note::write(const char *buf, size_t size, off_t offset) {
     NoteContent me;
 
     if (isBasket) {
-        std::vector<NoteContent> notes = myRoom->myNotes;
+        std::vector<NoteContent> &notes = myRoom->myNotes;
         me = notes[id];
     } else {
-        std::vector<NoteContent> notes = myRoom->myBaskets.at(basketName);
+        std::vector<NoteContent> &notes = myRoom->myBaskets.at(basketName);
         me = notes[id];
     }
 

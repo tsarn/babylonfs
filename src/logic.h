@@ -66,7 +66,7 @@ struct Note : public File {
 public:
     Note(const std::string &name, int id, RoomData* myRoom, bool isBasket, std::string  basketName);
     std::string_view getContents() override;
-    void write(const char *buf, size_t size, off_t offset) override; // TODO: implement me
+    void write(const char *buf, size_t size, off_t offset) override;
     void move(Entity &to, const std::string& newName) override;
 
     int id;
@@ -93,7 +93,6 @@ struct Room : public Directory {
     std::vector<std::string> getContents() override;
     Entity::ptr get(const std::string &name) override;
 
-private:
     RoomData *data;
 };
 
