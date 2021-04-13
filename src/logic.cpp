@@ -1,11 +1,13 @@
 #include "babylonfs.h"
 #include "logic.h"
 
+#include <utility>
+
 Entity::ptr BabylonFS::getRoot() {
     return std::make_unique<Room>(0, false);
 }
 
-Book::Book(const std::string &name, Room *myRoom) : myRoom(myRoom) {
+Book::Book(const std::string &name, Room *myRoom, std::string shelf_name) : myRoom(myRoom), shelf_name(std::move(shelf_name)) {
     this->name = name;
     //todo random contents by name as a seed
 }
@@ -15,7 +17,39 @@ std::string_view Book::getContents() {
 }
 
 void Book::move(Entity &to) {
+    (void)to;
     //todo [masha F]
+    if (dynamic_cast<Shelf *>(&to) != nullptr) {
+        auto shelf = dynamic_cast<Shelf *>(&to);
+        if (myRoom != shelf->myRoom) {
+            throwError(std::errc::invalid_argument);
+        }
+        if (shelf->name == shelf_name) {
+            auto taken_books = myRoom->taken_books[shelf_name];
+            auto it = std::find(taken_books.begin(), taken_books.end(), name);
+            if (std::find(taken_books.begin(), taken_books.end(), name) == taken_books.end()) {
+                throwError(std::errc::invalid_argument);
+            } else {
+                myRoom->shelf_to_book[shelf_name].push_back(name);
+            }
+            taken_books.erase(it);
+        } else {
+            throwError(std::errc::permission_denied);
+        }
+    } else if (dynamic_cast<Desk *>(&to) != nullptr) {
+        auto desk = dynamic_cast<Desk *>(&to);
+        if (myRoom != desk->myRoom) {
+            throwError(std::errc::invalid_argument);
+        }
+        auto shelf_books = myRoom->shelf_to_book[shelf_name];
+        auto it = std::find(shelf_books.begin(), shelf_books.end(), name);
+        if (it == shelf_books.end()) {
+            throwError(std::errc::invalid_argument);
+        } else {
+            myRoom->taken_books[shelf_name].push_back(name);
+        }
+        shelf_books.erase(it);
+    }
 }
 
 Shelf::Shelf(std::string name, Room *myRoom) : myRoom(myRoom) {
@@ -23,6 +57,7 @@ Shelf::Shelf(std::string name, Room *myRoom) : myRoom(myRoom) {
 }
 
 void Shelf::rename(const std::string &to) {
+    (void)to;
     // "does nothing"
 }
 
@@ -31,6 +66,7 @@ Bookcase::Bookcase(std::string name, Room *myRoom) : myRoom(myRoom) {
 }
 
 void Bookcase::rename(const std::string &to) {
+    (void)to;
     // "does nothing"
 }
 
@@ -55,12 +91,17 @@ std::vector<std::string> Desk::getContents() {
     for(const auto &kek: myRoom->myBaskets) {
         res.push_back(kek.first);
     }
+    for (const auto &kek: myRoom->taken_books) {
+        for (const auto &kek2: kek.second) {
+            res.push_back(kek2);
+        }
+    }
     return res;
 }
 
 Desk::Desk(Room *myRoom) : myRoom(myRoom) {}
 
-void Desk::mkdir(const std::string &name) {
+void Desk::createDirectory(const std::string &name) {
     myRoom->myBaskets[name] = {};
 }
 
@@ -78,7 +119,7 @@ std::vector<std::string> Notes::getContents() {
 }
 
 Note::Note(const std::string &name, int id, Room *myRoom, bool isBasket, std::string basketName) :
-    id(id), myRoom(myRoom), isBasket(isBasket), basketName(std::move(basketName)) {
+    id(id), isBasket(isBasket), myRoom(myRoom), basketName(std::move(basketName)) {
     this->name = name;
 }
 
@@ -147,7 +188,7 @@ Entity::ptr Shelf::get(const std::string &name) {
     auto book_names = myRoom->shelf_to_book.at(this->name);
     for (const auto &kek: book_names) {
         if (kek == name) {
-            return std::make_unique<Book>(name, myRoom);
+            return std::make_unique<Book>(name, myRoom, this->name);
         }
     }
     return nullptr;
@@ -157,11 +198,22 @@ Entity::ptr Desk::get(const std::string &name) {
     if (myRoom->myBaskets.contains(name)) {
         return std::make_unique<Notes>(name, myRoom);
     }
+
     for (size_t i = 0; i < myRoom->myNotes.size(); ++i) {
         if (myRoom->myNotes[i].first == name) {
             return std::make_unique<Note>(name, i, myRoom, false, "");
         }
     }
+
+    for (const auto &kek: myRoom->taken_books) {
+        for (const auto &kek2: kek.second) {
+            if (kek2 == name) {
+                return std::make_unique<Book>(name, myRoom, kek.first);
+            }
+        }
+    }
+    
+    return nullptr;
 }
 
 std::string_view Note::getContents() {
@@ -197,8 +249,15 @@ void Note::move(Entity &to) {
     }
     if (dynamic_cast<Notes *>(&to) != nullptr) {
         auto kek = dynamic_cast<Notes *>(&to);
+        if (myRoom != kek->myRoom) {
+            throwError(std::errc::invalid_argument);
+        }
         this->myRoom->myBaskets[kek->name].push_back(me);
     } else if (dynamic_cast<Desk *>(&to) != nullptr) {
+        auto kek = dynamic_cast<Desk *>(&to);
+        if (myRoom != kek->myRoom) {
+            throwError(std::errc::invalid_argument);
+        }
         this->myRoom->myNotes.push_back(me);
     }
 }

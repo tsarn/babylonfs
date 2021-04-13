@@ -2,8 +2,33 @@
 #include <unistd.h>
 #include <cstring>
 #include <utility>
+#include <system_error>
 
 #include "babylonfs.h"
+
+void throwError(std::errc code) {
+    throw std::system_error{std::make_error_code(code)};
+}
+
+void Entity::rename(const std::string&) {
+    throwError(std::errc::permission_denied);
+}
+
+void Entity::move(Entity &) {
+    throwError(std::errc::permission_denied);
+}
+
+void File::write(const char *, size_t, off_t) {
+    throwError(std::errc::permission_denied);
+}
+
+void Directory::createFile(const std::string &) {
+    throwError(std::errc::permission_denied);
+}
+
+void Directory::createDirectory(const std::string &) {
+    throwError(std::errc::permission_denied);
+}
 
 void Directory::stat(struct stat *st) {
     st->st_mode = S_IFDIR | 0755;
@@ -26,7 +51,7 @@ const struct fuse_operations *BabylonFS::run(const char *seed) noexcept {
     return me.fuseOps.get();
 }
 
-Entity::ptr BabylonFS::getPath(const char *pathStr) {
+Entity::ptr BabylonFS::getPath(const std::string& pathStr) {
     std::filesystem::path path{pathStr};
     Entity::ptr cur = getRoot();
     for (const auto &element : path) {
@@ -34,11 +59,11 @@ Entity::ptr BabylonFS::getPath(const char *pathStr) {
             continue;
         }
 
-        auto &dir = dynamic_cast<Directory &>(*cur);
-        cur = dir.get(element);
+        auto *dir = dynamic_cast<Directory*>(cur.get());
+        cur = dir ? dir->get(element) : nullptr;
 
         if (!cur) {
-            throw std::exception{};
+            throwError(std::errc::no_such_file_or_directory);
         }
     }
 
@@ -59,8 +84,8 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
 
         try {
             instance().getPath(path)->stat(st);
-        } catch (std::exception &e) {
-            return -ENOENT;
+        } catch (std::system_error &e) {
+            return -e.code().value();
         }
 
         return 0;
@@ -73,15 +98,19 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
 
         try {
             auto entry = instance().getPath(path);
-            auto &dir = dynamic_cast<Directory &>(*entry);
+            auto *dir = dynamic_cast<Directory*>(entry.get());
+
+            if (!dir) {
+                throwError(std::errc::not_a_directory);
+            }
 
             filler(buf, ".", nullptr, 0);
             filler(buf, "..", nullptr, 0);
-            for (const auto &name : dir.getContents()) {
+            for (const auto &name : dir->getContents()) {
                 filler(buf, name.c_str(), nullptr, 0);
             }
-        } catch (std::exception &e) {
-            return -ENOENT;
+        } catch (std::system_error &e) {
+            return -e.code().value();
         }
 
         return 0;
@@ -90,27 +119,41 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
     fuseOps->open = [](const char *path, struct fuse_file_info *fi) -> int {
         try {
             auto entry = instance().getPath(path);
-            (void) dynamic_cast<File &>(*entry); // check that it's a file, sorry
+            auto* file = dynamic_cast<File*>(entry.get());
+
+            if (!file) {
+                throwError(std::errc::is_a_directory);
+            }
 
             if ((fi->flags & O_ACCMODE) != O_RDONLY/* && dynamic_cast<Note *>(entry) == nullptr */)
                 return -EACCES;
-            //TODO create file if flags == |?|
-        } catch (std::exception &e) {
-            return -ENOENT;
+            //TODO create file if flags == |?| + check if it's possible (same like mkdir)
+        } catch (std::system_error &e) {
+            return -e.code().value();
         }
 
         return 0;
     };
 
-    fuseOps->create = [](const char *path, mode_t mode,
+    fuseOps->create = [](const char *pathStr, mode_t mode,
                          struct fuse_file_info *fi) -> int {
-        int res;
+        (void)mode;
+        (void)fi;
 
-        res = open(path, fi->flags, mode);
-        if (res == -1)
-            return -errno;
+        std::filesystem::path path{pathStr};
+        try {
+            auto entry = instance().getPath(path.parent_path());
+            auto *dir = dynamic_cast<Directory*>(entry.get());
 
-        fi->fh = res;
+            if (!dir) {
+                throwError(std::errc::not_a_directory);
+            }
+
+            dir->createFile(path.filename());
+        } catch (std::system_error &e) {
+            return -e.code().value();
+        }
+
         return 0;
     };
 
@@ -119,8 +162,8 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
             auto entry = instance().getPath(from);
 
             entry->rename(to);
-        } catch (std::exception &e) {
-            return -errno;
+        } catch (std::system_error &e) {
+            return -e.code().value();
         }
         return 0;
     };
@@ -132,19 +175,24 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
 
         try {
             auto entry = instance().getPath(path);
-            auto &file = dynamic_cast<File &>(*entry);
-            auto len = file.getContents().size();
+            auto* file = dynamic_cast<File*>(entry.get());
+
+            if (!file) {
+                throwError(std::errc::is_a_directory);
+            }
+
+            auto len = file->getContents().size();
 
             if (std::cmp_less(offset, len)) {
                 if (std::cmp_less(len, offset + size)) {
                     size = len - offset;
                 }
-                std::memcpy(buf, file.getContents().data() + offset, size);
+                std::memcpy(buf, file->getContents().data() + offset, size);
             } else {
                 size = 0;
             }
-        } catch (std::exception &e) {
-            return -ENOENT;
+        } catch (std::system_error &e) {
+            return -e.code().value();
         }
 
         return size;
@@ -156,28 +204,39 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
 
         try {
             auto entry = instance().getPath(path);
-            auto &file = dynamic_cast<File &>(*entry);
+            auto* file = dynamic_cast<File*>(entry.get());
 
-            file.write(buf, size, offset);
-        } catch (std::exception &e) {
-            return -ENOENT;
+            if (!file) {
+                throwError(std::errc::is_a_directory);
+            }
+
+            file->write(buf, size, offset);
+        } catch (std::system_error &e) {
+            return -e.code().value();
         }
 
         return size;
     };
 
     fuseOps->mkdir = [](const char *path, mode_t mode) -> int {
+        (void)mode;
+
         try {
             auto path_path = std::filesystem::path(path);
             auto parent = path_path.parent_path();
             auto name = path_path.filename();
-            auto entry = instance().getPath(parent.c_str());
-            auto &dir = dynamic_cast<Directory &>(*entry);
-            dir.mkdir(name);
+            auto entry = instance().getPath(parent);
+            auto* dir = dynamic_cast<Directory*>(entry.get());
+
+            if (!dir) {
+                throwError(std::errc::not_a_directory);
+            }
+
+            dir->createDirectory(name);
 
             return 0;
-        } catch (std::exception &e) {
-            return -EPERM;
+        } catch (std::system_error &e) {
+            return -e.code().value();
         }
     };
 }

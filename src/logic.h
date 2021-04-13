@@ -12,12 +12,12 @@ struct Book : public File {
     std::string name;
     std::string contents;
 
-    explicit Book(const std::string &name, Room *myRoom);
+    explicit Book(const std::string &name, Room *myRoom, std::string shelf_name);
     std::string_view getContents() override;
     void move(Entity &to) override;
 
-private:
     Room *myRoom;
+    std::string shelf_name;
 };
 
 struct Shelf : public Directory {
@@ -26,7 +26,6 @@ struct Shelf : public Directory {
     std::vector<std::string> getContents() override;
     ptr get(const std::string &name) override;
 
-private:
     Room* myRoom;
 };
 
@@ -35,7 +34,7 @@ struct Bookcase : Directory {
     void rename(const std::string &to) override;
     std::vector<std::string> getContents() override;
     ptr get(const std::string &name) override;
-private:
+
     Room* myRoom;
 };
 
@@ -43,10 +42,9 @@ struct Desk : public Directory {
     explicit Desk(Room* myRoom);
     std::vector<std::string> getContents() override;
     ptr get(const std::string &name) override;
-    void mkdir(const std::string &name) override;
-    void create(const std::string &name) override; //todo [masha F]
+    void createFile(const std::string &name) override; //todo [masha F]
+    void createDirectory(const std::string &name) override;
 
-private:
     Room* myRoom;
 };
 
@@ -54,9 +52,8 @@ struct Notes : public Directory {
     Notes(std::string name, Room* myRoom);
     std::vector<std::string> getContents() override;
     ptr get(const std::string &name) override;
-    void create(const std::string &name) override; //todo [masha F]
+    void createFile(const std::string &name) override; //todo [masha F]
 
-private:
     Room* myRoom;
 };
 
@@ -68,7 +65,6 @@ public:
     void rename(const std::string &to) override;
     void move(Entity &to) override; //todo [masha F]
 
-private:
     int id;
     bool isBasket;
     Room* myRoom;
@@ -87,5 +83,6 @@ struct Room : public Directory {
     int right_n;
     std::unordered_map<std::string, std::vector<note_content>> myBaskets;
     std::vector<note_content> myNotes;
+    std::unordered_map<std::string, std::vector<std::string>> taken_books;
     std::unordered_map<std::string, std::vector<std::string>> shelf_to_book;
 };

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-project("my_ldd" LANGUAGES C CXX VERSION "0.1")
+project("babylonfs" LANGUAGES C CXX VERSION "0.1")
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 add_executable(babylonfs

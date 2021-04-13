@@ -9,19 +9,16 @@
 
 using note_content = std::pair<std::string, std::string>;
 
+[[noreturn]] void throwError(std::errc code);
+
 struct Entity {
     using ptr = std::unique_ptr<Entity>;
 
     virtual void stat(struct stat *) = 0;
 
-    virtual void rename(const std::string &to) {
-        throw domain_error("rename is forbidden for this entity");
-    }
+    virtual void rename(const std::string &to);
 
-    //assume to is new parent path
-    virtual void move(Entity &to) {
-        throw domain_error("move is forbidden for this entity");
-    }
+    virtual void move(Entity &to);
 
     virtual ~Entity() = default;
 
@@ -35,13 +32,9 @@ struct Directory : public Entity {
 
     virtual Entity::ptr get(const std::string &name) = 0;
 
-    virtual void mkdir(const std::string &name) {
-        throw domain_error("mkdir is forbidden for this directory");
-    }
+    virtual void createFile(const std::string &name);
 
-    virtual void create(const std::string &name) {
-        throw domain_error("create is forbidden for this directory");
-    }
+    virtual void createDirectory(const std::string &name);
 };
 
 struct File : public Entity {
@@ -49,9 +42,7 @@ struct File : public Entity {
 
     virtual std::string_view getContents() = 0;
 
-    virtual void write(const char *buf, size_t size, off_t offset) {
-        throw domain_error("write is forbidden for this file");
-    }
+    virtual void write(const char *buf, size_t size, off_t offset);
 };
 
 
@@ -68,7 +59,7 @@ private:
 
     Entity::ptr getRoot();
 
-    Entity::ptr getPath(const char *pathStr);
+    Entity::ptr getPath(const std::string& pathStr);
 
 private:
     std::unique_ptr<struct fuse_operations> fuseOps{};
