@@ -14,7 +14,7 @@ std::string_view Book::getContents() {
     return contents;
 }
 
-void Book::move(const std::string &to) {
+void Book::move(Entity &to) {
     //todo [masha F]
 }
 
@@ -181,5 +181,24 @@ void Note::rename(const std::string &to) {
     } else {
         std::vector<note_content> notes = myRoom->myBaskets.at(basketName);
         notes[id].first = to;
+    }
+}
+
+void Note::move(Entity &to) {
+    note_content me;
+    if (isBasket) {
+        std::vector<note_content> notes = myRoom->myNotes;
+        me = notes[id];
+        notes.erase(notes.begin() + id);
+    } else {
+        std::vector<note_content> notes = myRoom->myBaskets.at(basketName);
+        me = notes[id];
+        notes.erase(notes.begin() + id);
+    }
+    if (dynamic_cast<Notes *>(&to) != nullptr) {
+        auto kek = dynamic_cast<Notes *>(&to);
+        this->myRoom->myBaskets[kek->name].push_back(me);
+    } else if (dynamic_cast<Desk *>(&to) != nullptr) {
+        this->myRoom->myNotes.push_back(me);
     }
 }

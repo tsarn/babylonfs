@@ -94,7 +94,7 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
 
             if ((fi->flags & O_ACCMODE) != O_RDONLY/* && dynamic_cast<Note *>(entry) == nullptr */)
                 return -EACCES;
-            //TODO create file if flags == |?| + check if it's possible (same like mkdir)
+            //TODO create file if flags == |?|
         } catch (std::exception &e) {
             return -ENOENT;
         }

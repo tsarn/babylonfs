@@ -15,17 +15,16 @@ struct Entity {
     virtual void stat(struct stat *) = 0;
 
     virtual void rename(const std::string &to) {
-        //TODO error
+        throw domain_error("rename is forbidden for this entity");
     }
 
     //assume to is new parent path
-    virtual void move(const std::string &to) {
-        //TODO error
+    virtual void move(Entity &to) {
+        throw domain_error("move is forbidden for this entity");
     }
 
     virtual ~Entity() = default;
 
-protected:
     std::string name;
 };
 
@@ -37,11 +36,11 @@ struct Directory : public Entity {
     virtual Entity::ptr get(const std::string &name) = 0;
 
     virtual void mkdir(const std::string &name) {
-        //TODO error
+        throw domain_error("mkdir is forbidden for this directory");
     }
 
     virtual void create(const std::string &name) {
-        //TODO error
+        throw domain_error("create is forbidden for this directory");
     }
 };
 
@@ -51,7 +50,7 @@ struct File : public Entity {
     virtual std::string_view getContents() = 0;
 
     virtual void write(const char *buf, size_t size, off_t offset) {
-        //TODO error
+        throw domain_error("write is forbidden for this file");
     }
 };
 

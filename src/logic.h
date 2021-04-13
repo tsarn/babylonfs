@@ -14,7 +14,7 @@ struct Book : public File {
 
     explicit Book(const std::string &name, Room *myRoom);
     std::string_view getContents() override;
-    void move(const std::string &to) override;
+    void move(Entity &to) override;
 
 private:
     Room *myRoom;
@@ -66,7 +66,7 @@ public:
     std::string_view getContents() override;
     void write(const char *buf, size_t size, off_t offset) override; // TODO: implement me
     void rename(const std::string &to) override;
-    void move(const std::string &to) override; //todo [masha F]
+    void move(Entity &to) override; //todo [masha F]
 
 private:
     int id;
