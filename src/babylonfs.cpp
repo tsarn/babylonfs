@@ -54,13 +54,14 @@ void File::stat(struct stat *st) {
     st->st_size = getSize();
 }
 
-const struct fuse_operations *BabylonFS::run(const char *seed) noexcept {
+const struct fuse_operations *BabylonFS::run(const char *seed, int cycle) noexcept {
     auto &me = instance();
     if (seed == nullptr) {
         me.seed = "";
     } else {
         me.seed = seed;
     }
+    me.cycle = cycle;
     return me.fuseOps.get();
 }
 
