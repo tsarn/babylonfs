@@ -10,11 +10,7 @@ void throwError(std::errc code) {
     throw std::system_error{std::make_error_code(code)};
 }
 
-void Entity::rename(const std::string&) {
-    throwError(std::errc::permission_denied);
-}
-
-void Entity::move(Entity &) {
+void Entity::move(Entity &, const std::string&) {
     throwError(std::errc::permission_denied);
 }
 
@@ -52,7 +48,7 @@ void File::stat(struct stat *st) {
 const struct fuse_operations *BabylonFS::run(const char *seed) noexcept {
     auto &me = instance();
     if (seed == nullptr) {
-        me.seed = ""; // TODO: random
+        me.seed = "";
     } else {
         me.seed = seed;
     }
@@ -105,8 +101,8 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
         (void) fi;
 
         try {
-            auto entry = instance().getPath(path);
-            auto *dir = dynamic_cast<Directory*>(entry.get());
+            auto entity = instance().getPath(path);
+            auto *dir = dynamic_cast<Directory*>(entity.get());
 
             if (!dir) {
                 throwError(std::errc::not_a_directory);
@@ -126,15 +122,15 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
 
     fuseOps->open = [](const char *path, struct fuse_file_info *fi) -> int {
         try {
-            auto entry = instance().getPath(path);
-            auto* file = dynamic_cast<File*>(entry.get());
+            auto entity = instance().getPath(path);
+            auto* file = dynamic_cast<File*>(entity.get());
 
             if (!file) {
                 throwError(std::errc::is_a_directory);
             }
 
-            if ((fi->flags & O_ACCMODE) != O_RDONLY/* && dynamic_cast<Note *>(entry) == nullptr */)
-                return -EACCES;
+            if ((fi->flags & O_ACCMODE) != O_RDONLY/* && dynamic_cast<Note *>(entity) == nullptr */)
+                throwError(std::errc::permission_denied);
             //TODO create file if flags == |?| + check if it's possible (same like mkdir)
         } catch (std::system_error &e) {
             return -e.code().value();
@@ -150,8 +146,8 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
 
         std::filesystem::path path{pathStr};
         try {
-            auto entry = instance().getPath(path.parent_path());
-            auto *dir = dynamic_cast<Directory*>(entry.get());
+            auto entity = instance().getPath(path.parent_path());
+            auto *dir = dynamic_cast<Directory*>(entity.get());
 
             if (!dir) {
                 throwError(std::errc::not_a_directory);
@@ -167,9 +163,16 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
 
     fuseOps->rename = [](const char *from, const char *to) -> int {
         try {
-            auto entry = instance().getPath(from);
+            auto entity = instance().getPath(from);
+            std::filesystem::path target{to};
+            auto targetEntity = instance().getPath(target.parent_path());
+            auto targetDir = dynamic_cast<Directory*>(targetEntity.get());
 
-            entry->rename(to);
+            if (!targetDir) {
+                throwError(std::errc::not_a_directory);
+            }
+
+            entity->move(*targetDir, target.filename());
         } catch (std::system_error &e) {
             return -e.code().value();
         }
@@ -182,8 +185,8 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
         (void) fi;
 
         try {
-            auto entry = instance().getPath(path);
-            auto* file = dynamic_cast<File*>(entry.get());
+            auto entity = instance().getPath(path);
+            auto* file = dynamic_cast<File*>(entity.get());
 
             if (!file) {
                 throwError(std::errc::is_a_directory);
@@ -211,8 +214,8 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
         (void) fi;
 
         try {
-            auto entry = instance().getPath(path);
-            auto* file = dynamic_cast<File*>(entry.get());
+            auto entity = instance().getPath(path);
+            auto* file = dynamic_cast<File*>(entity.get());
 
             if (!file) {
                 throwError(std::errc::is_a_directory);
@@ -233,8 +236,8 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
             auto path_path = std::filesystem::path(path);
             auto parent = path_path.parent_path();
             auto name = path_path.filename();
-            auto entry = instance().getPath(parent);
-            auto* dir = dynamic_cast<Directory*>(entry.get());
+            auto entity = instance().getPath(parent);
+            auto* dir = dynamic_cast<Directory*>(entity.get());
 
             if (!dir) {
                 throwError(std::errc::not_a_directory);

@@ -15,15 +15,15 @@ struct Book : public File {
     explicit Book(const std::string &name, RoomData *myRoom, std::string shelf_name);
     std::string_view getContents() override;
     int getSize() override;
-    void move(Entity &to) override;
+    void move(Entity &to, const std::string& newName) override;
 
     RoomData *myRoom;
-    std::string shelf_name;
+    std::string shelfName;
 };
 
 struct Shelf : public Directory {
     explicit Shelf(std::string name, RoomData* myRoom);
-    void rename(const std::string &to) override;
+    void move(Entity &to, const std::string& newName) override;
     std::vector<std::string> getContents() override;
     ptr get(const std::string &name) override;
 
@@ -32,7 +32,7 @@ struct Shelf : public Directory {
 
 struct Bookcase : Directory {
     Bookcase(std::string name, RoomData* myRoom);
-    void rename(const std::string &to) override;
+    void move(Entity &to, const std::string& newName) override;
     std::vector<std::string> getContents() override;
     ptr get(const std::string &name) override;
 
@@ -67,8 +67,7 @@ public:
     Note(const std::string &name, int id, RoomData* myRoom, bool isBasket, std::string  basketName);
     std::string_view getContents() override;
     void write(const char *buf, size_t size, off_t offset) override; // TODO: implement me
-    void rename(const std::string &to) override;
-    void move(Entity &to) override;
+    void move(Entity &to, const std::string& newName) override;
 
     int id;
     bool isBasket;

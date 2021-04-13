@@ -16,9 +16,7 @@ struct Entity {
 
     virtual void stat(struct stat *) = 0;
 
-    virtual void rename(const std::string &to);
-
-    virtual void move(Entity &to);
+    virtual void move(Entity &to, const std::string& newName);
 
     virtual ~Entity() = default;
 

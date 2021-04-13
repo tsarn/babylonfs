@@ -11,7 +11,7 @@ Entity::ptr BabylonFS::getRoot() {
     return std::make_unique<Room>(roomStorage.getRoom(0));
 }
 
-Book::Book(const std::string &name, RoomData *myRoom, std::string shelf_name) : myRoom(myRoom), shelf_name(std::move(shelf_name)) {
+Book::Book(const std::string &name, RoomData *myRoom, std::string shelf_name) : myRoom(myRoom), shelfName(std::move(shelf_name)) {
     this->name = name;
 }
 
@@ -26,18 +26,18 @@ std::string_view Book::getContents() {
     return contents;
 }
 
-void Book::move(Entity &to) {
+void Book::move(Entity &to, const std::string& newName) {
     if (auto shelf = dynamic_cast<Shelf *>(&to)) {
         if (myRoom != shelf->myRoom) {
             throwError(std::errc::invalid_argument);
         }
-        if (shelf->name == shelf_name) {
-            auto taken_books = myRoom->takenBooks[shelf_name];
+        if (shelf->name == shelfName) {
+            auto taken_books = myRoom->takenBooks[shelfName];
             auto it = std::find(taken_books.begin(), taken_books.end(), name);
             if (std::find(taken_books.begin(), taken_books.end(), name) == taken_books.end()) {
                 throwError(std::errc::invalid_argument);
             } else {
-                myRoom->shelfToBook[shelf_name].push_back(name);
+                myRoom->shelfToBook[shelfName].push_back(name);
             }
             taken_books.erase(it);
         } else {
@@ -47,14 +47,14 @@ void Book::move(Entity &to) {
         if (myRoom != desk->myRoom) {
             throwError(std::errc::invalid_argument);
         }
-        auto shelf_books = myRoom->shelfToBook[shelf_name];
-        auto it = std::find(shelf_books.begin(), shelf_books.end(), name);
-        if (it == shelf_books.end()) {
+        auto shelfBooks = myRoom->shelfToBook[shelfName];
+        auto it = std::find(shelfBooks.begin(), shelfBooks.end(), name);
+        if (it == shelfBooks.end()) {
             throwError(std::errc::invalid_argument);
         } else {
-            myRoom->takenBooks[shelf_name].push_back(name);
+            myRoom->takenBooks[shelfName].push_back(name);
         }
-        shelf_books.erase(it);
+        shelfBooks.erase(it);
     }
 }
 
@@ -62,18 +62,8 @@ Shelf::Shelf(std::string name, RoomData *myRoom) : myRoom(myRoom) {
     this->name = name;
 }
 
-void Shelf::rename(const std::string &to) {
-    (void)to;
-    // "does nothing"
-}
-
 Bookcase::Bookcase(std::string name, RoomData *myRoom) : myRoom(myRoom) {
     this->name = name;
-}
-
-void Bookcase::rename(const std::string &to) {
-    (void)to;
-    // "does nothing"
 }
 
 std::vector<std::string> Bookcase::getContents() {
@@ -237,6 +227,14 @@ Entity::ptr Shelf::get(const std::string &name) {
     return nullptr;
 }
 
+void Shelf::move(Entity &to, const std::string& newName) {
+    throwError(std::errc::operation_not_supported); // TODO!
+}
+
+void Bookcase::move(Entity &to, const std::string& newName) {
+    throwError(std::errc::operation_not_supported); // TODO!
+}
+
 Entity::ptr Desk::get(const std::string &name) {
     if (myRoom->myBaskets.contains(name)) {
         return std::make_unique<Notes>(name, myRoom);
@@ -305,24 +303,14 @@ std::string_view Note::getContents() {
     }
 }
 
-void Note::rename(const std::string &to) {
-    if (isBasket) {
-        std::vector<NoteContent> notes = myRoom->myNotes;
-        notes[id].first = to;
-    } else {
-        std::vector<NoteContent> notes = myRoom->myBaskets.at(basketName);
-        notes[id].first = to;
-    }
-}
-
-void Note::move(Entity &to) {
+void Note::move(Entity &to, const std::string& newName) {
     NoteContent me;
     if (isBasket) {
-        std::vector<NoteContent> notes = myRoom->myNotes;
+        auto& notes = myRoom->myNotes;
         me = notes[id];
         notes.erase(notes.begin() + id);
     } else {
-        std::vector<NoteContent> notes = myRoom->myBaskets.at(basketName);
+        auto& notes = myRoom->myBaskets.at(basketName);
         me = notes[id];
         notes.erase(notes.begin() + id);
     }
@@ -331,13 +319,13 @@ void Note::move(Entity &to) {
         if (myRoom != kek->myRoom) {
             throwError(std::errc::invalid_argument);
         }
-        this->myRoom->myBaskets[kek->name].push_back(me);
+        this->myRoom->myBaskets[kek->name].push_back({newName, me.second});
     } else if (dynamic_cast<Desk *>(&to) != nullptr) {
         auto kek = dynamic_cast<Desk *>(&to);
         if (myRoom != kek->myRoom) {
             throwError(std::errc::invalid_argument);
         }
-        this->myRoom->myNotes.push_back(me);
+        this->myRoom->myNotes.push_back({newName, me.second});
     }
 }
 
