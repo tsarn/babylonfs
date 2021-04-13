@@ -56,7 +56,7 @@ struct Notes : public Directory {
     std::vector<std::string> getContents() override;
     ptr get(const std::string &name) override;
     void createFile(std::string name) override;
-    void deleteFile(const std::string &name) override; //todo [masha F]
+    void deleteFile(const std::string &name) override;
 
     Room* myRoom;
 };
@@ -67,7 +67,7 @@ public:
     std::string_view getContents() override;
     void write(const char *buf, size_t size, off_t offset) override; // TODO: implement me
     void rename(const std::string &to) override;
-    void move(Entity &to) override; //todo [masha F]
+    void move(Entity &to) override;
 
     int id;
     bool isBasket;
@@ -78,7 +78,6 @@ public:
 struct Room : public Directory {
     Room(int n, int cycle);
 
-    //todo [masha F] запретить создание штук с зарезервированными именами
     std::vector<std::string> getContents() override;
     Entity::ptr get(const std::string &name) override;
 

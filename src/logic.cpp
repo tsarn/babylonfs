@@ -102,6 +102,11 @@ std::vector<std::string> Desk::getContents() {
 Desk::Desk(Room *myRoom) : myRoom(myRoom) {}
 
 void Desk::createDirectory(const std::string &name) {
+    auto contents = getContents();
+    auto it = std::find(contents.begin(), contents.end(), name);
+    if (it != contents.end()) {
+        throwError(std::errc::invalid_argument);
+    }
     myRoom->myBaskets[name] = {};
 }
 
@@ -181,6 +186,11 @@ Entity::ptr Notes::get(const std::string &name) {
 }
 
 void Notes::createFile(std::string name) {
+    auto contents = getContents();
+    auto it = std::find(contents.begin(), contents.end(), name);
+    if (it != contents.end()) {
+        throwError(std::errc::invalid_argument);
+    }
     note_content me;
     me.first = name;
     me.second = {};
@@ -239,6 +249,11 @@ Entity::ptr Desk::get(const std::string &name) {
 }
 
 void Desk::createFile(std::string name) {
+    auto contents = getContents();
+    auto it = std::find(contents.begin(), contents.end(), name);
+    if (it != contents.end()) {
+        throwError(std::errc::invalid_argument);
+    }
     note_content me;
     me.first = name;
     me.second = {};
@@ -312,5 +327,25 @@ void Note::move(Entity &to) {
             throwError(std::errc::invalid_argument);
         }
         this->myRoom->myNotes.push_back(me);
+    }
+}
+
+void Note::write(const char *buf, size_t size, off_t offset) {
+    note_content me;
+
+    if (isBasket) {
+        std::vector<note_content> notes = myRoom->myNotes;
+        me = notes[id];
+    } else {
+        std::vector<note_content> notes = myRoom->myBaskets.at(basketName);
+        me = notes[id];
+    }
+
+    if (offset + size > me.second.size()) {
+        me.second.resize(offset + size);
+    }
+
+    for (size_t i = 0; i < size; ++i) {
+        me.second[offset + i] = buf[i];
     }
 }
