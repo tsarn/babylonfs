@@ -30,7 +30,7 @@ struct Directory : public Entity {
 
     virtual Entity::ptr get(const std::string &name) = 0;
 
-    virtual void createFile(std::string name);
+    virtual void createFile(const std::string& name);
 
     virtual void deleteFile(const std::string &name);
 
@@ -44,7 +44,9 @@ struct File : public Entity {
 
     virtual std::string_view getContents() = 0;
 
-    virtual int getSize() { return getContents().size(); }
+    virtual int getSize();
+
+    virtual bool isWriteable();
 
     virtual void write(const char *buf, size_t size, off_t offset);
 };

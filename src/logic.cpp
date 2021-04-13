@@ -187,7 +187,7 @@ Entity::ptr Notes::get(const std::string &name) {
     return std::make_unique<Note>(name, id, myRoom, true, this->name);
 }
 
-void Notes::createFile(std::string name) {
+void Notes::createFile(const std::string &name) {
     auto contents = getContents();
     auto it = std::find(contents.begin(), contents.end(), name);
     if (it != contents.end()) {
@@ -268,7 +268,7 @@ Entity::ptr Desk::get(const std::string &name) {
     return nullptr;
 }
 
-void Desk::createFile(std::string name) {
+void Desk::createFile(const std::string &name) {
     auto contents = getContents();
     std::cout << contents.size();
     auto it = std::find(contents.begin(), contents.end(), name);
@@ -339,6 +339,10 @@ void Note::move(Entity &to, const std::string& newName) {
         }
         this->myRoom->myNotes.push_back({newName, me.second});
     }
+}
+
+bool Note::isWriteable() {
+    return true;
 }
 
 void Note::write(const char *buf, size_t size, off_t offset) {

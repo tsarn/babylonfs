@@ -19,7 +19,15 @@ void File::write(const char *, size_t, off_t) {
     throwError(std::errc::permission_denied);
 }
 
-void Directory::createFile(std::string ) {
+int File::getSize() {
+    return getContents().size();
+}
+
+bool File::isWriteable() {
+    return false;
+}
+
+void Directory::createFile(const std::string &) {
     throwError(std::errc::permission_denied);
 }
 
@@ -130,9 +138,9 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
                 throwError(std::errc::is_a_directory);
             }
 
-            if ((fi->flags & O_ACCMODE) != O_RDONLY/* && dynamic_cast<Note *>(entity) == nullptr */)
+            if ((fi->flags & O_ACCMODE) != O_RDONLY && !file->isWriteable()) {
                 throwError(std::errc::permission_denied);
-            //TODO create file if flags == |?| + check if it's possible (same like mkdir)
+            }
         } catch (std::system_error &e) {
             return -e.code().value();
         }

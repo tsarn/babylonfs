@@ -43,7 +43,7 @@ struct Desk : public Directory {
     explicit Desk(RoomData* myRoom);
     std::vector<std::string> getContents() override;
     ptr get(const std::string &name) override;
-    void createFile(std::string name) override;
+    void createFile(const std::string &name) override;
     void deleteFile(const std::string &name) override;
     void createDirectory(const std::string &name) override;
 
@@ -56,7 +56,7 @@ struct Notes : public Directory {
     Notes(std::string name, RoomData* myRoom);
     std::vector<std::string> getContents() override;
     ptr get(const std::string &name) override;
-    void createFile(std::string name) override;
+    void createFile(const std::string &name) override;
     void deleteFile(const std::string &name) override;
 
     RoomData* myRoom;
@@ -68,6 +68,7 @@ public:
     std::string_view getContents() override;
     void write(const char *buf, size_t size, off_t offset) override;
     void move(Entity &to, const std::string& newName) override;
+    bool isWriteable() override;
 
     int id;
     bool isBasket;
