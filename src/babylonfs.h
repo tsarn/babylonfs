@@ -55,6 +55,7 @@ struct File : public Entity {
 class BabylonFS {
 public:
     static const struct fuse_operations *run(const char *seed) noexcept;
+    static std::string getSeed() noexcept;
 
 private:
     BabylonFS();

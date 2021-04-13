@@ -22,7 +22,7 @@ int Book::getSize() {
 
 std::string_view Book::getContents() {
     if (contents.empty()) {
-        contents = generateStringFromSeed(name, bookSize);
+        contents = generateStringFromSeed(BabylonFS::getSeed() + ":" + name, bookSize);
     }
     return contents;
 }
@@ -144,7 +144,7 @@ RoomData::RoomData(int n, int cycle) : cycle(cycle) {
             auto seed = std::to_string(n) + kek + kek2;
             std::vector<std::string> names(32);
             for (int i = 0; i < names.size(); ++i) {
-                names[i] = generateStringFromSeed(shelfName + "/book/" + std::to_string(i), 16);
+                names[i] = generateStringFromSeed(BabylonFS::getSeed() + ":" + shelfName + "/book/" + std::to_string(i), 16);
             }
             shelfToBook[shelfName] = names;
         }

@@ -301,3 +301,7 @@ BabylonFS &BabylonFS::instance() noexcept {
     static BabylonFS singleton;
     return singleton;
 }
+
+std::string BabylonFS::getSeed() noexcept {
+    return instance().seed;
+}
