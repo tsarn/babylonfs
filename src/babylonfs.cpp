@@ -191,8 +191,8 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
 
             auto len = file->getContents().size();
 
-            if (std::cmp_less(offset, len)) {
-                if (std::cmp_less(len, offset + size)) {
+            if (offset < len) {
+                if (len < offset + size) {
                     size = len - offset;
                 }
                 std::memcpy(buf, file->getContents().data() + offset, size);

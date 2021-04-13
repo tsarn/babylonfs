@@ -4,7 +4,7 @@
 #include <utility>
 
 Entity::ptr BabylonFS::getRoot() {
-    return std::make_unique<Room>(0, false);
+    return std::make_unique<Room>(0, cycle);
 }
 
 Book::Book(const std::string &name, Room *myRoom, std::string shelf_name) : myRoom(myRoom), shelf_name(std::move(shelf_name)) {
@@ -129,7 +129,7 @@ Note::Note(const std::string &name, int id, Room *myRoom, bool isBasket, std::st
 }
 
 Room::Room(int n, int cycle) : cycle(cycle) {
-    if (cycle == 0) {
+    if (cycle == -1) {
         left_n = n - 1;
         right_n = n + 1;
     } else {
@@ -153,18 +153,18 @@ Room::Room(int n, int cycle) : cycle(cycle) {
 
 std::vector<std::string> Room::getContents() {
     return {
-            std::to_string(left_n),
-            std::to_string(right_n),
-            "0", "1", "2", "3", "desk"
+            "k" + std::to_string(left_n),
+            "k" + std::to_string(right_n),
+            "b0", "b1", "b2", "b3", "desk"
     };
 }
 
 Entity::ptr Room::get(const std::string &name) {
     if (name == "b0" || name == "b1" || name == "b2" || name == "b3") {
         return std::make_unique<Bookcase>(name, this);
-    } else if (name == std::to_string(left_n)) {
+    } else if (name == "k" + std::to_string(left_n)) {
         return std::make_unique<Room>(left_n, cycle);
-    } else if (name == std::to_string(right_n)) {
+    } else if (name == "k" + std::to_string(right_n)) {
         return std::make_unique<Room>(right_n, cycle);
     } else if (name == "desk") {
         return std::make_unique<Desk>(this);
