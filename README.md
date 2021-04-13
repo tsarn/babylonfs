@@ -1,24 +1,18 @@
 # babylonfs
 
-TODO
+Ну вавилонская библиотека типа
 
 ## Как собирать
 
-```shell
-mkdir build
-cd build
-cmake ..
-make
-```
+    $ mkdir build
+    $ cd build
+    $ cmake ..
+    $ make
 
 ## Использование
 
-TODO
-
-## Пример:
-
-TODO
+    $ babylonfs -f -s <путь>
 
 ## Как запустить тесты локально:
 
-TODO
+Тесты?..
