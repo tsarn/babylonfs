@@ -241,9 +241,7 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
     fuseOps->unlink = [](const char *pathStr) -> int {
         try {
             auto path = std::filesystem::path(pathStr);
-
             auto entity = instance().getPath(path.parent_path());
-
             auto* dir = dynamic_cast<Directory*>(entity.get());
 
             if (!dir) {
@@ -251,6 +249,24 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
             }
 
             dir->deleteFile(path.filename());
+        } catch (std::system_error &e) {
+            return -e.code().value();
+        }
+
+        return 0;
+    };
+
+    fuseOps->rmdir = [](const char *pathStr) -> int {
+        try {
+            auto path = std::filesystem::path(pathStr);
+            auto entity = instance().getPath(path.parent_path());
+            auto* dir = dynamic_cast<Directory*>(entity.get());
+
+            if (!dir) {
+                throwError(std::errc::no_such_file_or_directory);
+            }
+
+            dir->deleteDirectory(path.filename());
         } catch (std::system_error &e) {
             return -e.code().value();
         }
