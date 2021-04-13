@@ -306,7 +306,7 @@ void Desk::deleteDirectory(const std::string &name) {
 }
 
 std::string_view Note::getContents() {
-    if (isBasket) {
+    if (!isBasket) {
         std::vector<NoteContent>& notes = myRoom->myNotes;
         return notes[id].second;
     } else {
@@ -317,7 +317,7 @@ std::string_view Note::getContents() {
 
 void Note::move(Entity &to, const std::string& newName) {
     NoteContent me;
-    if (isBasket) {
+    if (!isBasket) {
         auto& notes = myRoom->myNotes;
         me = notes[id];
         notes.erase(notes.begin() + id);
@@ -348,7 +348,7 @@ bool Note::isWriteable() {
 void Note::write(const char *buf, size_t size, off_t offset) {
     NoteContent me;
 
-    if (isBasket) {
+    if (!isBasket) {
         std::vector<NoteContent> &notes = myRoom->myNotes;
         me = notes[id];
     } else {

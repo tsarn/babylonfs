@@ -238,13 +238,33 @@ BabylonFS::BabylonFS() : fuseOps(std::make_unique<struct fuse_operations>()) {
         return size;
     };
 
-    fuseOps->mkdir = [](const char *path, mode_t mode) -> int {
+    fuseOps->unlink = [](const char *pathStr) -> int {
+        try {
+            auto path = std::filesystem::path(pathStr);
+
+            auto entity = instance().getPath(path.parent_path());
+
+            auto* dir = dynamic_cast<Directory*>(entity.get());
+
+            if (!dir) {
+                throwError(std::errc::no_such_file_or_directory);
+            }
+
+            dir->deleteFile(path.filename());
+        } catch (std::system_error &e) {
+            return -e.code().value();
+        }
+
+        return 0;
+    };
+
+    fuseOps->mkdir = [](const char *pathStr, mode_t mode) -> int {
         (void)mode;
 
         try {
-            auto path_path = std::filesystem::path(path);
-            auto parent = path_path.parent_path();
-            auto name = path_path.filename();
+            auto path = std::filesystem::path(pathStr);
+            auto parent = path.parent_path();
+            auto name = path.filename();
             auto entity = instance().getPath(parent);
             auto* dir = dynamic_cast<Directory*>(entity.get());
 
