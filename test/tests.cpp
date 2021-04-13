@@ -8,6 +8,7 @@
 #include "../src/babylonfs.h"
 
 #define seed "test_seed"
+#define cycle -1
 #define root "./test_babylonfs"
 
 namespace fs = std::filesystem;
@@ -16,7 +17,7 @@ class BabylonFSKeeper {
 private:
     std::string path;
     struct fuse_args args = FUSE_ARGS_INIT(0, {});
-    const struct fuse_operations *ops = BabylonFS::run(seed);
+    const struct fuse_operations *ops = BabylonFS::run(seed, cycle);
     struct fuse_chan* chan;
     struct fuse* fuse;
     std::thread fuse_thread;
@@ -53,10 +54,10 @@ void rooms_walk(const fs::path &path, int depth, int max_depth,
         return;
     }
     checker(path);
-    for (const auto& neighbour_name : {"k-1", "k1"}) {
-        auto neighbour_path = path;
-        neighbour_path.append(neighbour_name);
-        rooms_walk(neighbour_path, depth + 1, max_depth, checker);
+    for (const auto& neighbour_path : fs::directory_iterator(path)) {
+        if (neighbour_path.path().filename().string()[0] == 'k') {
+            rooms_walk(neighbour_path, depth + 1, max_depth, checker);
+        }
     }
 }
 
