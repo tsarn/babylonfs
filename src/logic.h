@@ -3,7 +3,7 @@
 #include <utility>
 #include "babylonfs.h"
 
-struct Room;
+struct RoomData;
 struct Bookcase;
 struct Shelf;
 struct Book;
@@ -12,34 +12,34 @@ struct Book : public File {
     std::string name;
     std::string contents;
 
-    explicit Book(const std::string &name, Room *myRoom, std::string shelf_name);
+    explicit Book(const std::string &name, RoomData *myRoom, std::string shelf_name);
     std::string_view getContents() override;
     void move(Entity &to) override;
 
-    Room *myRoom;
+    RoomData *myRoom;
     std::string shelf_name;
 };
 
 struct Shelf : public Directory {
-    explicit Shelf(std::string name, Room* myRoom);
+    explicit Shelf(std::string name, RoomData* myRoom);
     void rename(const std::string &to) override;
     std::vector<std::string> getContents() override;
     ptr get(const std::string &name) override;
 
-    Room* myRoom;
+    RoomData* myRoom;
 };
 
 struct Bookcase : Directory {
-    Bookcase(std::string name, Room* myRoom);
+    Bookcase(std::string name, RoomData* myRoom);
     void rename(const std::string &to) override;
     std::vector<std::string> getContents() override;
     ptr get(const std::string &name) override;
 
-    Room* myRoom;
+    RoomData* myRoom;
 };
 
 struct Desk : public Directory {
-    explicit Desk(Room* myRoom);
+    explicit Desk(RoomData* myRoom);
     std::vector<std::string> getContents() override;
     ptr get(const std::string &name) override;
     void createFile(std::string name) override;
@@ -48,22 +48,22 @@ struct Desk : public Directory {
 
     void deleteDirectory(const std::string &name) override;
 
-    Room* myRoom;
+    RoomData* myRoom;
 };
 
 struct Notes : public Directory {
-    Notes(std::string name, Room* myRoom);
+    Notes(std::string name, RoomData* myRoom);
     std::vector<std::string> getContents() override;
     ptr get(const std::string &name) override;
     void createFile(std::string name) override;
     void deleteFile(const std::string &name) override;
 
-    Room* myRoom;
+    RoomData* myRoom;
 };
 
 struct Note : public File {
 public:
-    Note(const std::string &name, int id, Room* myRoom, bool isBasket, std::string  basketName);
+    Note(const std::string &name, int id, RoomData* myRoom, bool isBasket, std::string  basketName);
     std::string_view getContents() override;
     void write(const char *buf, size_t size, off_t offset) override; // TODO: implement me
     void rename(const std::string &to) override;
@@ -71,21 +71,37 @@ public:
 
     int id;
     bool isBasket;
-    Room* myRoom;
+    RoomData* myRoom;
     std::string basketName;
 };
 
+struct RoomData {
+    RoomData(int n, int cycle);
+
+    int cycle;
+    int leftN;
+    int rightN;
+    std::unordered_map<std::string, std::vector<NoteContent>> myBaskets;
+    std::vector<NoteContent> myNotes;
+    std::unordered_map<std::string, std::vector<std::string>> takenBooks;
+    std::unordered_map<std::string, std::vector<std::string>> shelfToBook;
+};
+
 struct Room : public Directory {
-    Room(int n, int cycle);
+    explicit Room(RoomData*);
 
     std::vector<std::string> getContents() override;
     Entity::ptr get(const std::string &name) override;
 
+private:
+    RoomData *data;
+};
+
+struct RoomStorage {
+    explicit RoomStorage(int cycle);
+    RoomData* getRoom(int n);
+
+private:
     int cycle;
-    int left_n;
-    int right_n;
-    std::unordered_map<std::string, std::vector<note_content>> myBaskets;
-    std::vector<note_content> myNotes;
-    std::unordered_map<std::string, std::vector<std::string>> taken_books;
-    std::unordered_map<std::string, std::vector<std::string>> shelf_to_book;
+    std::unordered_map<int, std::unique_ptr<RoomData>> rooms;
 };

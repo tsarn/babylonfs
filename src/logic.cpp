@@ -4,10 +4,11 @@
 #include <utility>
 
 Entity::ptr BabylonFS::getRoot() {
-    return std::make_unique<Room>(0, cycle);
+    static RoomStorage roomStorage{cycle};
+    return std::make_unique<Room>(roomStorage.getRoom(0));
 }
 
-Book::Book(const std::string &name, Room *myRoom, std::string shelf_name) : myRoom(myRoom), shelf_name(std::move(shelf_name)) {
+Book::Book(const std::string &name, RoomData *myRoom, std::string shelf_name) : myRoom(myRoom), shelf_name(std::move(shelf_name)) {
     this->name = name;
     //todo random contents by name as a seed
 }
@@ -17,42 +18,38 @@ std::string_view Book::getContents() {
 }
 
 void Book::move(Entity &to) {
-    (void)to;
-
-    if (dynamic_cast<Shelf *>(&to) != nullptr) {
-        auto shelf = dynamic_cast<Shelf *>(&to);
+    if (auto shelf = dynamic_cast<Shelf *>(&to)) {
         if (myRoom != shelf->myRoom) {
             throwError(std::errc::invalid_argument);
         }
         if (shelf->name == shelf_name) {
-            auto taken_books = myRoom->taken_books[shelf_name];
+            auto taken_books = myRoom->takenBooks[shelf_name];
             auto it = std::find(taken_books.begin(), taken_books.end(), name);
             if (std::find(taken_books.begin(), taken_books.end(), name) == taken_books.end()) {
                 throwError(std::errc::invalid_argument);
             } else {
-                myRoom->shelf_to_book[shelf_name].push_back(name);
+                myRoom->shelfToBook[shelf_name].push_back(name);
             }
             taken_books.erase(it);
         } else {
             throwError(std::errc::permission_denied);
         }
-    } else if (dynamic_cast<Desk *>(&to) != nullptr) {
-        auto desk = dynamic_cast<Desk *>(&to);
+    } else if (auto desk = dynamic_cast<Desk *>(&to)) {
         if (myRoom != desk->myRoom) {
             throwError(std::errc::invalid_argument);
         }
-        auto shelf_books = myRoom->shelf_to_book[shelf_name];
+        auto shelf_books = myRoom->shelfToBook[shelf_name];
         auto it = std::find(shelf_books.begin(), shelf_books.end(), name);
         if (it == shelf_books.end()) {
             throwError(std::errc::invalid_argument);
         } else {
-            myRoom->taken_books[shelf_name].push_back(name);
+            myRoom->takenBooks[shelf_name].push_back(name);
         }
         shelf_books.erase(it);
     }
 }
 
-Shelf::Shelf(std::string name, Room *myRoom) : myRoom(myRoom) {
+Shelf::Shelf(std::string name, RoomData *myRoom) : myRoom(myRoom) {
     this->name = name;
 }
 
@@ -61,7 +58,7 @@ void Shelf::rename(const std::string &to) {
     // "does nothing"
 }
 
-Bookcase::Bookcase(std::string name, Room *myRoom) : myRoom(myRoom) {
+Bookcase::Bookcase(std::string name, RoomData *myRoom) : myRoom(myRoom) {
     this->name = name;
 }
 
@@ -91,7 +88,7 @@ std::vector<std::string> Desk::getContents() {
     for(const auto &kek: myRoom->myBaskets) {
         res.push_back(kek.first);
     }
-    for (const auto &kek: myRoom->taken_books) {
+    for (const auto &kek: myRoom->takenBooks) {
         for (const auto &kek2: kek.second) {
             res.push_back(kek2);
         }
@@ -99,7 +96,7 @@ std::vector<std::string> Desk::getContents() {
     return res;
 }
 
-Desk::Desk(Room *myRoom) : myRoom(myRoom) {}
+Desk::Desk(RoomData *myRoom) : myRoom(myRoom) {}
 
 void Desk::createDirectory(const std::string &name) {
     auto contents = getContents();
@@ -110,7 +107,7 @@ void Desk::createDirectory(const std::string &name) {
     myRoom->myBaskets[name] = {};
 }
 
-Notes::Notes(std::string name, Room *myRoom) : myRoom(myRoom) {
+Notes::Notes(std::string name, RoomData *myRoom) : myRoom(myRoom) {
     this->name = name;
 }
 
@@ -123,22 +120,22 @@ std::vector<std::string> Notes::getContents() {
     return res;
 }
 
-Note::Note(const std::string &name, int id, Room *myRoom, bool isBasket, std::string basketName) :
+Note::Note(const std::string &name, int id, RoomData *myRoom, bool isBasket, std::string basketName) :
     id(id), isBasket(isBasket), myRoom(myRoom), basketName(std::move(basketName)) {
     this->name = name;
 }
 
-Room::Room(int n, int cycle) : cycle(cycle) {
+RoomData::RoomData(int n, int cycle) : cycle(cycle) {
     if (cycle == -1) {
-        left_n = n - 1;
-        right_n = n + 1;
+        leftN = n - 1;
+        rightN = n + 1;
     } else {
         if (n == 0) {
-            left_n = cycle - 1;
-            right_n = 1;
+            leftN = cycle - 1;
+            rightN = 1;
         } else if (n == cycle - 1) {
-            left_n = n - 1;
-            right_n = 0;
+            leftN = n - 1;
+            rightN = 0;
         }
     }
     for (auto kek : {"b0", "b1", "b2","b3"}) {
@@ -146,28 +143,30 @@ Room::Room(int n, int cycle) : cycle(cycle) {
             auto shelf_name = std::string(kek) + kek2;
             auto seed = std::to_string(n) + kek + kek2;
             std::vector<std::string> names(32); //todo generate names from seed
-            shelf_to_book[shelf_name] = names;
+            shelfToBook[shelf_name] = names;
         }
     }
 }
 
+Room::Room(RoomData* data) : data(data) {}
+
 std::vector<std::string> Room::getContents() {
     return {
-            "k" + std::to_string(left_n),
-            "k" + std::to_string(right_n),
+            "k" + std::to_string(data->leftN),
+            "k" + std::to_string(data->rightN),
             "b0", "b1", "b2", "b3", "desk"
     };
 }
 
 Entity::ptr Room::get(const std::string &name) {
     if (name == "b0" || name == "b1" || name == "b2" || name == "b3") {
-        return std::make_unique<Bookcase>(name, this);
-    } else if (name == "k" + std::to_string(left_n)) {
-        return std::make_unique<Room>(left_n, cycle);
-    } else if (name == "k" + std::to_string(right_n)) {
-        return std::make_unique<Room>(right_n, cycle);
+        return std::make_unique<Bookcase>(name, data);
+    } else if (name == "k" + std::to_string(data->leftN)) {
+        return std::make_unique<Room>(data);
+    } else if (name == "k" + std::to_string(data->rightN)) {
+        return std::make_unique<Room>(data);
     } else if (name == "desk") {
-        return std::make_unique<Desk>(this);
+        return std::make_unique<Desk>(data);
     }
     return nullptr;
 }
@@ -191,7 +190,7 @@ void Notes::createFile(std::string name) {
     if (it != contents.end()) {
         throwError(std::errc::invalid_argument);
     }
-    note_content me;
+    NoteContent me;
     me.first = name;
     me.second = {};
     myRoom->myBaskets[this->name].push_back(me);
@@ -213,11 +212,11 @@ void Notes::deleteFile(const std::string &name) {
 }
 
 std::vector<std::string> Shelf::getContents() {
-    return myRoom->shelf_to_book.at(this->name);
+    return myRoom->shelfToBook.at(this->name);
 }
 
 Entity::ptr Shelf::get(const std::string &name) {
-    auto book_names = myRoom->shelf_to_book.at(this->name);
+    auto book_names = myRoom->shelfToBook.at(this->name);
     for (const auto &kek: book_names) {
         if (kek == name) {
             return std::make_unique<Book>(name, myRoom, this->name);
@@ -237,7 +236,7 @@ Entity::ptr Desk::get(const std::string &name) {
         }
     }
 
-    for (const auto &kek: myRoom->taken_books) {
+    for (const auto &kek: myRoom->takenBooks) {
         for (const auto &kek2: kek.second) {
             if (kek2 == name) {
                 return std::make_unique<Book>(name, myRoom, kek.first);
@@ -254,7 +253,7 @@ void Desk::createFile(std::string name) {
     if (it != contents.end()) {
         throwError(std::errc::invalid_argument);
     }
-    note_content me;
+    NoteContent me;
     me.first = name;
     me.second = {};
     myRoom->myNotes.push_back(me);
@@ -286,32 +285,32 @@ void Desk::deleteDirectory(const std::string &name) {
 
 std::string_view Note::getContents() {
     if (isBasket) {
-        std::vector<note_content> notes = myRoom->myNotes;
+        std::vector<NoteContent> notes = myRoom->myNotes;
         return notes[id].second;
     } else {
-        std::vector<note_content> notes = myRoom->myBaskets.at(basketName);
+        std::vector<NoteContent> notes = myRoom->myBaskets.at(basketName);
         return notes[id].second;
     }
 }
 
 void Note::rename(const std::string &to) {
     if (isBasket) {
-        std::vector<note_content> notes = myRoom->myNotes;
+        std::vector<NoteContent> notes = myRoom->myNotes;
         notes[id].first = to;
     } else {
-        std::vector<note_content> notes = myRoom->myBaskets.at(basketName);
+        std::vector<NoteContent> notes = myRoom->myBaskets.at(basketName);
         notes[id].first = to;
     }
 }
 
 void Note::move(Entity &to) {
-    note_content me;
+    NoteContent me;
     if (isBasket) {
-        std::vector<note_content> notes = myRoom->myNotes;
+        std::vector<NoteContent> notes = myRoom->myNotes;
         me = notes[id];
         notes.erase(notes.begin() + id);
     } else {
-        std::vector<note_content> notes = myRoom->myBaskets.at(basketName);
+        std::vector<NoteContent> notes = myRoom->myBaskets.at(basketName);
         me = notes[id];
         notes.erase(notes.begin() + id);
     }
@@ -331,13 +330,13 @@ void Note::move(Entity &to) {
 }
 
 void Note::write(const char *buf, size_t size, off_t offset) {
-    note_content me;
+    NoteContent me;
 
     if (isBasket) {
-        std::vector<note_content> notes = myRoom->myNotes;
+        std::vector<NoteContent> notes = myRoom->myNotes;
         me = notes[id];
     } else {
-        std::vector<note_content> notes = myRoom->myBaskets.at(basketName);
+        std::vector<NoteContent> notes = myRoom->myBaskets.at(basketName);
         me = notes[id];
     }
 
@@ -348,4 +347,11 @@ void Note::write(const char *buf, size_t size, off_t offset) {
     for (size_t i = 0; i < size; ++i) {
         me.second[offset + i] = buf[i];
     }
+}
+
+RoomStorage::RoomStorage(int cycle) : cycle(cycle) {}
+
+RoomData* RoomStorage::getRoom(int n) {
+    if (rooms[n]) return rooms[n].get();
+    return (rooms[n] = std::make_unique<RoomData>(n, cycle)).get();
 }

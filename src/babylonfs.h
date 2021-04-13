@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <fuse.h>
 
-using note_content = std::pair<std::string, std::string>;
+using NoteContent = std::pair<std::string, std::string>;
 
 [[noreturn]] void throwError(std::errc code);
 
